@@ -1,0 +1,125 @@
+= Instalación de Linux Containers =
+Humberto de Jesus Flores Acuña
+
+Linux Containers es una interfaz para el kernel que permite ejecutar múltiples instancias de sistemas operativos o aplicaciones aisladas.
+
+Para la instalación necesita algunos requerimientos:
+
+- [*] glibc
+- [*] Linux kernel >= 2.6.32
+
+La intalación la realicé con el comando aptitude:
+
+```bash
+aptitude install lxc
+```
+
+Para la creación de contenedores como usuario normal se necesitan algunas otras dependencias, así que por ahora la creación se efectuará como superusuario.
+
+Para verificar las plantillas que se pueden utilizar, usé el siguiente comando:
+
+```bash
+root@kimpine:~# ls -l /usr/share/lxc/templates/
+total 336
+-rwxr-xr-x 1 root root 10789 nov 14  2015 lxc-alpine
+-rwxr-xr-x 1 root root 13533 nov 14  2015 lxc-altlinux
+-rwxr-xr-x 1 root root 10253 nov 14  2015 lxc-archlinux
+-rwxr-xr-x 1 root root  9446 nov 14  2015 lxc-busybox
+-rwxr-xr-x 1 root root 28932 nov 14  2015 lxc-centos
+-rwxr-xr-x 1 root root 10150 nov 14  2015 lxc-cirros
+-rwxr-xr-x 1 root root 13998 nov 14  2015 lxc-debian
+-rwxr-xr-x 1 root root 17427 nov 14  2015 lxc-download
+-rwxr-xr-x 1 root root 47200 nov 14  2015 lxc-fedora
+-rwxr-xr-x 1 root root 27808 nov 14  2015 lxc-gentoo
+-rwxr-xr-x 1 root root 13961 nov 14  2015 lxc-openmandriva
+-rwxr-xr-x 1 root root 13705 nov 14  2015 lxc-opensuse
+-rwxr-xr-x 1 root root 35445 nov 14  2015 lxc-oracle
+-rwxr-xr-x 1 root root 11837 nov 14  2015 lxc-plamo
+-rwxr-xr-x 1 root root  6851 nov 14  2015 lxc-sshd
+-rwxr-xr-x 1 root root 24273 nov 14  2015 lxc-ubuntu
+-rwxr-xr-x 1 root root 12401 nov 14  2015 lxc-ubuntu-cloud
+```
+
+En mi caso instalé un template de debian de la siguiente manera:
+
+```bash
+LANG=ES SUITE=jessie MIRROR=http://ftp.mx.debian.org/debian/ lxc-create -n trantor -t debian
+```
+
+Podemos verificar la instalación de la siguiente manera:
+
+```bash
+root@kimpine:~# lxc-ls -f
+NAME     STATE    IPV4  IPV6  AUTOSTART  
+---------------------------------------
+trantor  STOPPED  -     -     NO
+```
+
+Y está alojados en la siguiente dirección:
+
+```bash
+root@kimpine:~# ls /var/lib/lxc/
+trantor
+```
+
+Con el siguiente comando se inicia un contenedor:
+
+```bash
+root@kimpine:~# lxc-start -n trantor
+
+...
+...
+...
+
+Debian GNU/Linux 8 trantor console
+
+trantor login: 
+
+```
+
+Así es como se ve el árbol de procesos desde fuera del contenedor y claramente se pude notar que estoy corriendo un top dentro del contenedor:
+
+```bash
+root     12547  |           \_ lxc-start -n trantor
+root     12549  |               \_ /sbin/init
+root     12583  |                   \_ /lib/systemd/systemd-journald
+root     12661  |                   \_ /usr/sbin/sshd -D
+root     12668  |                   \_ /sbin/agetty --noclear tty2 linux
+root     12669  |                   \_ /sbin/agetty --noclear tty4 linux
+root     12670  |                   \_ /sbin/agetty --noclear tty1 linux
+root     12671  |                   \_ /sbin/agetty --noclear tty3 linux
+root     12673  |                   \_ /bin/login --     
+root     22228  |                   |   \_ -bash
+root     22280  |                   |       \_ top
+root     22229  |                   \_ /sbin/agetty --noclear tty6 linux
+root     22234  |                   \_ /sbin/agetty --noclear tty5 linux
+
+
+```
+
+Y este es el árbol dentro del contenedor:
+
+```bash
+root@trantor:~# ps auxf
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.1  28172  4412 ?        Ss   14:56   0:00 /sbin/init
+root        20  0.0  0.0  32968  3420 ?        Ss   14:56   0:00 /lib/systemd/systemd-journald
+root        69  0.0  0.1  55184  5312 ?        Ss   14:56   0:00 /usr/sbin/sshd -D
+root        74  0.0  0.0  12664  1776 tty2     Ss+  14:56   0:00 /sbin/agetty --noclear tty2 linux
+root        75  0.0  0.0  12664  1772 tty4     Ss+  14:56   0:00 /sbin/agetty --noclear tty4 linux
+root        76  0.0  0.0  12664  1856 tty1     Ss+  14:56   0:00 /sbin/agetty --noclear tty1 linux
+root        77  0.0  0.0  12664  1948 tty3     Ss+  14:56   0:00 /sbin/agetty --noclear tty3 linux
+root        78  0.0  0.0  63316  2968 console  Ss   14:56   0:00 /bin/login --     
+root       108  0.0  0.0  20232  3340 console  S    14:58   0:00  \_ -bash
+root       144  0.0  0.0  17496  2088 console  R+   15:01   0:00      \_ ps auxf
+root       141  0.0  0.0  12664  1932 ?        Ss   15:00   0:00 /sbin/agetty --noclear tty5 linux
+root       142  0.0  0.0  12664  1840 ?        Ss   15:00   0:00 /sbin/agetty --noclear tty6 linux
+```
+
+
+
+Las llamadas al sistema que se me ocurren, serían:
+
+- [*] exec
+- [*] clone
+- [*] chroot
